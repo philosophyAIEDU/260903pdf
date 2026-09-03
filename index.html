@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PDF 한데모아</title>
-<meta name="description" content="여러 PDF를 원하는 순서로 골라 브라우저 안에서 바로 하나로 합치는 도구">
+<meta name="description" content="여러 PDF와 이미지(JPG, PNG)를 원하는 순서로 골라 브라우저 안에서 바로 하나의 PDF로 합치는 도구">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%8E%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -252,6 +252,21 @@
     flex-shrink: 0;
   }
 
+  .thumb {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb-doc { color: var(--ink-faint); }
+
   .file-info {
     min-width: 0;
     flex: 1;
@@ -397,20 +412,20 @@
 <body>
 <div class="page">
   <header>
-    <span class="eyebrow">No.001 · 브라우저 안에서 바로 병합</span>
-    <h1>여러 PDF를<br>순서대로 한 파일로</h1>
-    <p class="lede">파일을 추가하고 원하는 순서로 배열한 뒤 버튼 하나로 합치세요. 업로드 없이 이 브라우저 안에서만 처리되어, 문서가 어디로도 전송되지 않습니다.</p>
+    <span class="eyebrow">No.001 · 브라우저 안에서 바로 병합 · 변환</span>
+    <h1>여러 PDF·이미지를<br>순서대로 한 PDF로</h1>
+    <p class="lede">PDF와 JPG·PNG 이미지를 함께 추가하고 원하는 순서로 배열한 뒤 버튼 하나로 합치세요. 이미지는 자동으로 PDF 페이지가 됩니다. 업로드 없이 이 브라우저 안에서만 처리되어, 문서가 어디로도 전송되지 않습니다.</p>
   </header>
 
   <main>
-    <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="PDF 파일 추가하기">
+    <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="PDF 또는 이미지 파일 추가하기">
       <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/><path d="M7 9l5-5 5 5"/><path d="M12 4v12"/></svg>
       <div>
-        <div class="dropzone-title">PDF 파일을 이곳에 끌어다 놓으세요</div>
-        <div class="dropzone-sub">또는 아래 버튼으로 직접 선택하세요 (여러 개 한 번에 가능)</div>
+        <div class="dropzone-title">PDF·이미지 파일을 이곳에 끌어다 놓으세요</div>
+        <div class="dropzone-sub">JPG, PNG도 가능 · 여러 개 한 번에 선택할 수 있어요</div>
       </div>
       <button type="button" class="pick-btn" id="pickBtn">파일 선택</button>
-      <input type="file" id="fileInput" accept="application/pdf,.pdf" multiple hidden>
+      <input type="file" id="fileInput" accept="application/pdf,.pdf,image/jpeg,image/jpg,image/png,.jpg,.jpeg,.png" multiple hidden>
     </div>
 
     <div class="filelist-wrap" id="filelistWrap" hidden>
@@ -431,7 +446,7 @@
 
   <footer>
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-    <span>서버 업로드 없음 · 이 브라우저 탭을 닫으면 남는 기록도 없습니다. 사용법: PDF 추가 → 손잡이(⠿)로 순서 조정 → 합치기.</span>
+    <span>서버 업로드 없음 · 이 브라우저 탭을 닫으면 남는 기록도 없습니다. 사용법: PDF·이미지 추가 → 손잡이(⠿)로 순서 조정 → 합치기.</span>
   </footer>
 </div>
 
@@ -469,7 +484,7 @@
   function updateDropzoneMode() {
     dropzone.classList.toggle("compact", entries.length > 0);
     dropzone.querySelector(".dropzone-title").textContent =
-      entries.length > 0 ? "PDF 더 추가하기" : "PDF 파일을 이곳에 끌어다 놓으세요";
+      entries.length > 0 ? "PDF·이미지 더 추가하기" : "PDF·이미지 파일을 이곳에 끌어다 놓으세요";
   }
 
   function render() {
@@ -491,13 +506,20 @@
 
       var metaText = entry.error
         ? entry.error
-        : (entry.pages != null ? entry.pages + "쪽 · " + fmtSize(entry.size) : "읽는 중…");
+        : entry.kind === "pdf"
+          ? (entry.pages != null ? entry.pages + "쪽 · " + fmtSize(entry.size) : "읽는 중…")
+          : (entry.width != null ? entry.width + "×" + entry.height + " · " + fmtSize(entry.size) : "읽는 중…");
+
+      var thumbHtml = entry.kind === "image" && entry.thumbUrl
+        ? '<span class="thumb"><img src="' + entry.thumbUrl + '" alt=""></span>'
+        : '<span class="thumb thumb-doc" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>';
 
       li.innerHTML =
         '<span class="grip" aria-hidden="true">' +
           '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>' +
         '</span>' +
         '<span class="order-badge">' + (i + 1) + '</span>' +
+        thumbHtml +
         '<span class="file-info">' +
           '<span class="file-name" title="' + escapeHtml(entry.name) + '">' + escapeHtml(entry.name) + '</span>' +
           '<span class="file-meta' + (entry.error ? ' error' : '') + '">' + escapeHtml(metaText) + '</span>' +
@@ -524,38 +546,97 @@
     });
   }
 
+  function isPdfFile(f) {
+    return f.type === "application/pdf" || /\.pdf$/i.test(f.name);
+  }
+
+  function isImageFile(f) {
+    return /^image\/(jpe?g|png)$/i.test(f.type) || /\.(jpe?g|png)$/i.test(f.name);
+  }
+
+  function imgMime(f) {
+    return (/\.png$/i.test(f.name) || f.type === "image/png") ? "image/png" : "image/jpeg";
+  }
+
+  // Redraws the image onto a canvas and re-encodes it before handing it to
+  // pdf-lib. This does two things: it guarantees a baseline (non-progressive,
+  // non-interlaced) encoding pdf-lib can always embed, and — because the
+  // <img> element already applies EXIF rotation when it decodes — it bakes
+  // that rotation into the pixels, so phone photos don't end up sideways.
+  function normalizeImage(url, mime) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          canvas.getContext("2d").drawImage(img, 0, 0);
+          canvas.toBlob(function (blob) {
+            if (!blob) { reject(new Error("encode-failed")); return; }
+            blob.arrayBuffer().then(function (buf) {
+              resolve({ width: img.naturalWidth, height: img.naturalHeight, bytes: new Uint8Array(buf), mime: mime });
+            }, reject);
+          }, mime, mime === "image/jpeg" ? 0.92 : undefined);
+        } catch (e) { reject(e); }
+      };
+      img.onerror = function () { reject(new Error("decode-failed")); };
+      img.src = url;
+    });
+  }
+
   async function addFiles(fileList) {
     var files = Array.prototype.filter.call(fileList, function (f) {
-      return f.type === "application/pdf" || /\.pdf$/i.test(f.name);
+      return isPdfFile(f) || isImageFile(f);
     });
     if (files.length === 0) return;
 
     for (var i = 0; i < files.length; i++) {
       var file = files[i];
+      var kind = isPdfFile(file) ? "pdf" : "image";
       var entry = {
         id: "f" + (++uid),
         file: file,
         name: file.name,
         size: file.size,
+        kind: kind,
         bytes: null,
+        mime: null,
         pages: null,
+        width: null,
+        height: null,
+        thumbUrl: null,
         error: null
       };
       entries.push(entry);
       render();
 
-      try {
-        var buf = await file.arrayBuffer();
-        var bytes = new Uint8Array(buf);
-        var doc = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
-        if (doc.isEncrypted) {
-          entry.error = "암호로 보호된 파일이라 열 수 없어요";
-        } else {
-          entry.bytes = bytes;
-          entry.pages = doc.getPageCount();
+      if (kind === "pdf") {
+        try {
+          var buf = await file.arrayBuffer();
+          var bytes = new Uint8Array(buf);
+          var doc = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+          if (doc.isEncrypted) {
+            entry.error = "암호로 보호된 파일이라 열 수 없어요";
+          } else {
+            entry.bytes = bytes;
+            entry.pages = doc.getPageCount();
+          }
+        } catch (err) {
+          entry.error = "PDF를 읽을 수 없는 파일이에요";
         }
-      } catch (err) {
-        entry.error = "PDF를 읽을 수 없는 파일이에요";
+      } else {
+        entry.thumbUrl = URL.createObjectURL(file);
+        try {
+          var norm = await normalizeImage(entry.thumbUrl, imgMime(file));
+          entry.width = norm.width;
+          entry.height = norm.height;
+          entry.bytes = norm.bytes;
+          entry.mime = norm.mime;
+          entry.pages = 1;
+        } catch (err) {
+          entry.error = "이미지를 열 수 없는 파일이에요";
+        }
       }
       render();
     }
@@ -572,6 +653,8 @@
   }
 
   function removeEntry(id) {
+    var target = entries.find(function (e) { return e.id === id; });
+    if (target && target.thumbUrl) URL.revokeObjectURL(target.thumbUrl);
     entries = entries.filter(function (e) { return e.id !== id; });
     render();
   }
@@ -657,9 +740,22 @@
     try {
       var merged = await PDFLib.PDFDocument.create();
       for (var i = 0; i < valid.length; i++) {
-        var src = await PDFLib.PDFDocument.load(valid[i].bytes);
-        var pages = await merged.copyPages(src, src.getPageIndices());
-        pages.forEach(function (p) { merged.addPage(p); });
+        var entry = valid[i];
+        try {
+          if (entry.kind === "pdf") {
+            var src = await PDFLib.PDFDocument.load(entry.bytes);
+            var pages = await merged.copyPages(src, src.getPageIndices());
+            pages.forEach(function (p) { merged.addPage(p); });
+          } else {
+            var img = entry.mime === "image/png"
+              ? await merged.embedPng(entry.bytes)
+              : await merged.embedJpg(entry.bytes);
+            var page = merged.addPage([img.width, img.height]);
+            page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+          }
+        } catch (innerErr) {
+          throw new Error(entry.name + " 파일을 처리하는 중 문제가 생겼어요");
+        }
       }
       var outBytes = await merged.save();
 
@@ -677,7 +773,7 @@
 
       setStatus("저장했어요.", "success");
     } catch (err) {
-      setStatus("합치는 중 문제가 생겼어요. 다시 시도해 주세요.", "error");
+      setStatus((err && err.message) || "합치는 중 문제가 생겼어요. 다시 시도해 주세요.", "error");
     } finally {
       mergeBtn.disabled = valid.length === 0;
       mergeBtn.classList.remove("loading");
