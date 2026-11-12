@@ -4,6 +4,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   :root {
     --bg: #eef0ea;
@@ -405,6 +406,130 @@
 
   footer svg { flex-shrink: 0; margin-top: 2px; color: var(--ink-faint); }
 
+
+  /* ---------- tabs ---------- */
+
+  [hidden] { display: none !important; }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    margin-bottom: 28px;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    width: fit-content;
+  }
+
+  .tab {
+    font: inherit;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--ink-soft);
+    background: none;
+    border: none;
+    border-radius: 999px;
+    padding: 8px 20px;
+    cursor: pointer;
+  }
+
+  .tab:hover { color: var(--ink); }
+  .tab[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); }
+  .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- split ---------- */
+
+  .src-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    box-shadow: var(--shadow);
+  }
+
+  .modes {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .modes legend {
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--ink-soft);
+    padding: 0 2px 8px;
+  }
+
+  .mode {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    cursor: pointer;
+  }
+
+  .mode:has(input[type="radio"]:checked) {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .mode input[type="radio"] { margin-top: 3px; accent-color: var(--accent); }
+
+  .mode-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  .mode-title { font-size: 14.5px; font-weight: 500; }
+  .mode-desc { font-size: 12.5px; color: var(--ink-soft); line-height: 1.5; }
+
+  .mode-field {
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+  }
+
+  .mode-field input[type="text"],
+  .mode-field input[type="number"] {
+    font: inherit;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 14px;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 7px 10px;
+    min-width: 0;
+  }
+
+  .mode-field input[type="number"] { width: 5.5em; }
+  .mode-field input[type="text"] { flex: 1; }
+  .mode-field input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .preview {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    background: var(--surface-alt);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    word-break: keep-all;
+  }
+
+  .preview.error { color: var(--danger); background: var(--danger-soft); border-color: var(--danger); }
+  .preview b { font-family: "IBM Plex Mono", monospace; font-weight: 500; color: var(--ink); }
+  .preview.error b { color: inherit; }
+
   @media (prefers-reduced-motion: reduce) {
     * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
   }
@@ -416,6 +541,12 @@
 </style>
 
 <div class="page">
+  <nav class="tabs" role="tablist" aria-label="기능 선택">
+    <button type="button" class="tab" role="tab" id="tabMerge" aria-selected="true" aria-controls="panelMerge">합치기</button>
+    <button type="button" class="tab" role="tab" id="tabSplit" aria-selected="false" aria-controls="panelSplit">나누기</button>
+  </nav>
+
+  <section id="panelMerge" role="tabpanel" aria-labelledby="tabMerge">
   <header>
     <span class="eyebrow">No.001 · 브라우저 안에서 바로 병합 · 변환</span>
     <h1>여러 PDF·이미지를<br>순서대로 한 PDF로</h1>
@@ -448,10 +579,80 @@
     <button type="button" class="merge-btn" id="mergeBtn" disabled>PDF로 합치기</button>
     <p class="status" id="status" aria-live="polite"></p>
   </main>
+  </section>
+
+  <section id="panelSplit" role="tabpanel" aria-labelledby="tabSplit" hidden>
+  <header>
+    <span class="eyebrow">No.002 · 브라우저 안에서 바로 분할</span>
+    <h1>PDF 한 개를<br>원하는 방식으로 나누기</h1>
+    <p class="lede">한 장씩, 2장·3장씩, 또는 직접 쪽 범위를 정해 여러 개의 PDF로 나눠 보세요. 업로드 없이 이 브라우저 안에서만 처리됩니다. 결과가 여러 개면 ZIP 파일 하나로 묶어 저장해요.</p>
+  </header>
+
+  <main>
+    <div class="dropzone" id="splitDrop" tabindex="0" role="button" aria-label="나눌 PDF 파일 선택하기">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/><path d="M7 9l5-5 5 5"/><path d="M12 4v12"/></svg>
+      <div>
+        <div class="dropzone-title">나눌 PDF 파일을 이곳에 끌어다 놓으세요</div>
+        <div class="dropzone-sub">PDF 한 개를 선택해 주세요</div>
+      </div>
+      <button type="button" class="pick-btn" id="splitPick">파일 선택</button>
+      <input type="file" id="splitInput" accept="application/pdf,.pdf" hidden>
+    </div>
+
+    <div class="src-card" id="splitSrc" hidden>
+      <span class="thumb thumb-doc" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>
+      <span class="file-info">
+        <span class="file-name" id="splitName"></span>
+        <span class="file-meta" id="splitMeta"></span>
+      </span>
+      <button type="button" class="icon-btn remove" id="splitRemove" aria-label="파일 제거"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+
+    <fieldset class="modes" id="splitModes" hidden>
+      <legend>나누는 방식</legend>
+      <label class="mode">
+        <input type="radio" name="splitMode" value="each" checked>
+        <span class="mode-body">
+          <span class="mode-title">한 쪽씩 나누기</span>
+          <span class="mode-desc">모든 쪽을 각각 별도의 PDF로 저장해요. (5쪽이면 5개 파일)</span>
+        </span>
+      </label>
+      <label class="mode">
+        <input type="radio" name="splitMode" value="every">
+        <span class="mode-body">
+          <span class="mode-title">N쪽씩 나누기</span>
+          <span class="mode-desc">정한 쪽수만큼 묶어서 저장해요. (5쪽을 2쪽씩 → 1-2, 3-4, 5)</span>
+          <span class="mode-field"><input type="number" id="splitEvery" min="1" step="1" value="2" inputmode="numeric" aria-label="묶을 쪽수"><span>쪽씩</span></span>
+        </span>
+      </label>
+      <label class="mode">
+        <input type="radio" name="splitMode" value="ranges">
+        <span class="mode-body">
+          <span class="mode-title">범위를 직접 지정해 나누기</span>
+          <span class="mode-desc">쉼표(,)로 구분한 범위마다 파일 하나가 만들어져요. 예: 1-2, 3, 4-5</span>
+          <span class="mode-field"><input type="text" id="splitRanges" placeholder="1-2, 3, 4-5" autocomplete="off" aria-label="나눌 쪽 범위"></span>
+        </span>
+      </label>
+      <label class="mode">
+        <input type="radio" name="splitMode" value="extract">
+        <span class="mode-body">
+          <span class="mode-title">필요한 쪽만 뽑아내기</span>
+          <span class="mode-desc">적은 쪽들을 모아 PDF 한 개로 저장해요. 예: 1-3, 5</span>
+          <span class="mode-field"><input type="text" id="splitExtract" placeholder="1-3, 5" autocomplete="off" aria-label="뽑아낼 쪽"></span>
+        </span>
+      </label>
+    </fieldset>
+
+    <div class="preview" id="splitPreview" hidden aria-live="polite"></div>
+
+    <button type="button" class="merge-btn" id="splitBtn" disabled>PDF 나누기</button>
+    <p class="status" id="splitStatus" aria-live="polite"></p>
+  </main>
+  </section>
 
   <footer>
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-    <span>서버 업로드 없음 · 이 브라우저 탭을 닫으면 남는 기록도 없습니다. 사용법: PDF·이미지 추가 → 손잡이(⠿)로 순서 조정 → 합치기.</span>
+    <span>서버 업로드 없음 · 이 브라우저 탭을 닫으면 남는 기록도 없습니다. 합치기: PDF·이미지 추가 → 순서 조정 → 합치기 / 나누기: PDF 선택 → 방식 선택 → 나누기.</span>
   </footer>
 </div>
 
@@ -798,5 +999,266 @@
   });
 
   render();
+
+  // =====================================================================
+  // 나누기 (split)
+  // =====================================================================
+
+  var tabMerge = document.getElementById("tabMerge");
+  var tabSplit = document.getElementById("tabSplit");
+  var panelMerge = document.getElementById("panelMerge");
+  var panelSplit = document.getElementById("panelSplit");
+
+  function showTab(which) {
+    var split = which === "split";
+    panelMerge.hidden = split;
+    panelSplit.hidden = !split;
+    tabMerge.setAttribute("aria-selected", String(!split));
+    tabSplit.setAttribute("aria-selected", String(split));
+  }
+  tabMerge.addEventListener("click", function () { showTab("merge"); });
+  tabSplit.addEventListener("click", function () { showTab("split"); });
+
+  var splitDrop = document.getElementById("splitDrop");
+  var splitInput = document.getElementById("splitInput");
+  var splitPick = document.getElementById("splitPick");
+  var splitSrc = document.getElementById("splitSrc");
+  var splitName = document.getElementById("splitName");
+  var splitMeta = document.getElementById("splitMeta");
+  var splitRemove = document.getElementById("splitRemove");
+  var splitModes = document.getElementById("splitModes");
+  var splitEvery = document.getElementById("splitEvery");
+  var splitRanges = document.getElementById("splitRanges");
+  var splitExtract = document.getElementById("splitExtract");
+  var splitPreview = document.getElementById("splitPreview");
+  var splitBtn = document.getElementById("splitBtn");
+  var splitStatus = document.getElementById("splitStatus");
+
+  /** @type {{name:string, size:number, bytes:Uint8Array, pages:number}|null} */
+  var splitFile = null;
+
+  function setSplitStatus(text, kind) {
+    splitStatus.textContent = text || "";
+    splitStatus.className = "status" + (kind ? " " + kind : "");
+  }
+
+  // Parses "1-2, 3, 5-7" into [{from,to}] (1-based, inclusive).
+  // Returns {error} on any malformed or out-of-range token.
+  function parseRanges(text, total) {
+    var cleaned = String(text || "")
+      .replace(/[，、;]/g, ",")
+      .replace(/[~–—−－∼]/g, "-")
+      .replace(/\s+/g, "");
+    if (!cleaned) return { error: "쪽 범위를 입력해 주세요. 예: 1-2, 3, 4-5" };
+    var out = [];
+    var parts = cleaned.split(",").filter(function (p) { return p !== ""; });
+    for (var i = 0; i < parts.length; i++) {
+      var m = /^(\d+)(?:-(\d+))?$/.exec(parts[i]);
+      if (!m) return { error: "'" + parts[i] + "'은(는) 올바른 범위가 아니에요. 예: 1-2, 3, 4-5" };
+      var a = parseInt(m[1], 10);
+      var b = m[2] != null ? parseInt(m[2], 10) : a;
+      if (a < 1 || b < 1 || a > total || b > total) {
+        return { error: "'" + parts[i] + "'은(는) 이 문서의 쪽수(1-" + total + ")를 벗어나요." };
+      }
+      if (a > b) return { error: "'" + parts[i] + "'은(는) 시작 쪽이 끝 쪽보다 커요." };
+      out.push({ from: a, to: b });
+    }
+    if (out.length === 0) return { error: "쪽 범위를 입력해 주세요. 예: 1-2, 3, 4-5" };
+    return { ranges: out };
+  }
+
+  function rangeLabel(r) {
+    return r.from === r.to ? r.from + "쪽" : r.from + "-" + r.to + "쪽";
+  }
+
+  // Builds the list of output files for the current options.
+  // Each output is {label, indices:[0-based page indexes]}.
+  function buildPlan() {
+    if (!splitFile) return { error: "나눌 PDF를 먼저 선택해 주세요." };
+    var total = splitFile.pages;
+    var mode = (document.querySelector('input[name="splitMode"]:checked') || {}).value;
+    var groups = [];
+
+    function span(from, to) {
+      var idx = [];
+      for (var p = from; p <= to; p++) idx.push(p - 1);
+      return idx;
+    }
+
+    if (mode === "each") {
+      for (var p = 1; p <= total; p++) groups.push({ label: rangeLabel({ from: p, to: p }), indices: span(p, p) });
+    } else if (mode === "every") {
+      var n = parseInt(splitEvery.value, 10);
+      if (!(n >= 1)) return { error: "묶을 쪽수는 1 이상의 숫자로 입력해 주세요." };
+      for (var s = 1; s <= total; s += n) {
+        var e = Math.min(s + n - 1, total);
+        groups.push({ label: rangeLabel({ from: s, to: e }), indices: span(s, e) });
+      }
+    } else if (mode === "ranges") {
+      var pr = parseRanges(splitRanges.value, total);
+      if (pr.error) return { error: pr.error };
+      pr.ranges.forEach(function (r) { groups.push({ label: rangeLabel(r), indices: span(r.from, r.to) }); });
+    } else if (mode === "extract") {
+      var px = parseRanges(splitExtract.value, total);
+      if (px.error) return { error: px.error };
+      var idx = [];
+      px.ranges.forEach(function (r) { idx = idx.concat(span(r.from, r.to)); });
+      groups.push({ label: px.ranges.map(function (r) { return r.from === r.to ? r.from : r.from + "-" + r.to; }).join(",") + "쪽", indices: idx });
+    }
+    return { groups: groups };
+  }
+
+  function renderSplit() {
+    var has = !!splitFile;
+    splitSrc.hidden = !has;
+    splitModes.hidden = !has;
+    splitPreview.hidden = !has;
+    splitDrop.classList.toggle("compact", has);
+    splitDrop.querySelector(".dropzone-title").textContent =
+      has ? "다른 PDF로 바꾸기" : "나눌 PDF 파일을 이곳에 끌어다 놓으세요";
+
+    if (!has) { splitBtn.disabled = true; splitBtn.textContent = "PDF 나누기"; return; }
+
+    splitName.textContent = splitFile.name;
+    splitName.title = splitFile.name;
+    splitMeta.textContent = splitFile.pages + "쪽 · " + fmtSize(splitFile.size);
+
+    var plan = buildPlan();
+    if (plan.error) {
+      splitPreview.className = "preview error";
+      splitPreview.textContent = plan.error;
+      splitBtn.disabled = true;
+      splitBtn.textContent = "PDF 나누기";
+      return;
+    }
+    var g = plan.groups;
+    var shown = g.slice(0, 12).map(function (x) { return x.label; }).join(", ");
+    if (g.length > 12) shown += " 외 " + (g.length - 12) + "개";
+    splitPreview.className = "preview";
+    splitPreview.innerHTML = "<b>" + g.length + "개</b> 파일로 나뉘어요 → " + escapeHtml(shown);
+    splitBtn.disabled = false;
+    splitBtn.textContent = g.length > 1 ? "PDF " + g.length + "개로 나누기 (ZIP)" : "PDF 나누기";
+  }
+
+  async function loadSplitFile(file) {
+    if (!file || !isPdfFile(file)) {
+      setSplitStatus("PDF 파일만 선택할 수 있어요.", "error");
+      return;
+    }
+    setSplitStatus("");
+    try {
+      var bytes = new Uint8Array(await file.arrayBuffer());
+      var doc = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+      if (doc.isEncrypted) { setSplitStatus("암호로 보호된 파일이라 열 수 없어요.", "error"); return; }
+      splitFile = { name: file.name, size: file.size, bytes: bytes, pages: doc.getPageCount() };
+      if (splitFile.pages === 0) { splitFile = null; setSplitStatus("쪽이 없는 PDF예요.", "error"); }
+    } catch (err) {
+      splitFile = null;
+      setSplitStatus("PDF를 읽을 수 없는 파일이에요.", "error");
+    }
+    renderSplit();
+  }
+
+  splitPick.addEventListener("click", function (e) { e.stopPropagation(); splitInput.click(); });
+  splitDrop.addEventListener("click", function () { splitInput.click(); });
+  splitDrop.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); splitInput.click(); }
+  });
+  splitInput.addEventListener("change", function () {
+    if (splitInput.files[0]) loadSplitFile(splitInput.files[0]);
+    splitInput.value = "";
+  });
+  ["dragenter", "dragover"].forEach(function (evt) {
+    splitDrop.addEventListener(evt, function (e) { e.preventDefault(); splitDrop.classList.add("drag-over"); });
+  });
+  ["dragleave", "drop"].forEach(function (evt) {
+    splitDrop.addEventListener(evt, function (e) { e.preventDefault(); splitDrop.classList.remove("drag-over"); });
+  });
+  splitDrop.addEventListener("drop", function (e) {
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) loadSplitFile(f);
+  });
+  splitRemove.addEventListener("click", function () {
+    splitFile = null;
+    setSplitStatus("");
+    renderSplit();
+  });
+
+  // Re-render the preview whenever an option changes. Typing in a field also
+  // selects its radio so the user never has to click twice.
+  splitModes.addEventListener("input", function (e) {
+    var t = e.target;
+    if (t.type !== "radio") {
+      var radio = t.closest(".mode").querySelector('input[type="radio"]');
+      if (radio) radio.checked = true;
+    }
+    setSplitStatus("");
+    renderSplit();
+  });
+
+  async function saveSplitFile(data, filename) {
+    if (!downloadsNS) {
+      downloadsNS = window.claude && typeof window.claude.use === "function"
+        ? await window.claude.use("downloads")
+        : null;
+    }
+    if (!downloadsNS) {
+      throw new Error("이 화면에서는 저장 기능을 사용할 수 없어요. Claude 앱에서 열어 다시 시도해 주세요.");
+    }
+    await downloadsNS.save({ filename: filename, data: data });
+  }
+
+  function baseName(name) {
+    return name.replace(/\.pdf$/i, "").replace(/[\\/:*?"<>|]+/g, "_") || "문서";
+  }
+
+  splitBtn.addEventListener("click", async function () {
+    var plan = buildPlan();
+    if (plan.error) { setSplitStatus(plan.error, "error"); return; }
+
+    splitBtn.disabled = true;
+    splitBtn.classList.add("loading");
+    setSplitStatus("나누는 중…");
+
+    try {
+      var src = await PDFLib.PDFDocument.load(splitFile.bytes);
+      var base = baseName(splitFile.name);
+      var pad = String(plan.groups.length).length < 2 ? 2 : String(plan.groups.length).length;
+      var files = [];
+
+      for (var i = 0; i < plan.groups.length; i++) {
+        var g = plan.groups[i];
+        var out = await PDFLib.PDFDocument.create();
+        var pages = await out.copyPages(src, g.indices);
+        pages.forEach(function (p) { out.addPage(p); });
+        var bytes = await out.save();
+        var num = String(i + 1);
+        while (num.length < pad) num = "0" + num;
+        files.push({ name: base + "_" + num + "_" + g.label + ".pdf", bytes: bytes });
+      }
+
+      if (files.length === 1) {
+        await saveSplitFile(files[0].bytes, files[0].name);
+      } else {
+        if (typeof JSZip === "undefined") throw new Error("ZIP 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인해 주세요.");
+        var zip = new JSZip();
+        files.forEach(function (f) { zip.file(f.name, f.bytes); });
+        var zipBytes = await zip.generateAsync({ type: "uint8array" });
+        await saveSplitFile(zipBytes, base + "_분할.zip");
+      }
+      setSplitStatus(files.length > 1 ? files.length + "개 파일을 ZIP으로 저장했어요." : "저장했어요.", "success");
+    } catch (err) {
+      var code = err && err.code;
+      if (code === "declined") setSplitStatus("저장을 취소했어요.");
+      else if (code === "too_large") setSplitStatus("결과 파일이 16MB를 넘어요. 범위를 줄여 다시 시도해 주세요.", "error");
+      else if (code === "rate_limited") setSplitStatus("잠시 후 다시 시도해 주세요.", "error");
+      else setSplitStatus((err && err.message) || "나누는 중 문제가 생겼어요. 다시 시도해 주세요.", "error");
+    } finally {
+      splitBtn.classList.remove("loading");
+      renderSplit();
+    }
+  });
+
+  renderSplit();
 })();
 </script>
