@@ -37,7 +37,18 @@
 이 저장소는 같은 도구를 두 가지 버전으로 담고 있습니다. 화면과 병합 기능은 동일하고, 결과 파일을 저장하는 방식만 다릅니다.
 
 - `pdf-merger.html` — Claude Artifact 전용 버전. 위 Claude 링크로 게시된 페이지의 원본이며, Claude의 파일 저장 기능(`window.claude` 저장 API)을 사용합니다. **Netlify 등 일반 웹 호스팅에는 이 파일을 쓰지 마세요** — Claude 화면 밖에서는 저장 기능이 동작하지 않습니다.
-- `index.html` — **일반 웹 호스팅용(Netlify 등) 독립 실행 버전**. 완전한 HTML 문서이며, 브라우저 표준 다운로드 방식(Blob + `<a download>`)으로 파일을 저장합니다. Netlify에 배포할 때는 이 파일을 씁니다.
+- `index.html` + `app.js` + `vendor/` — **일반 웹 호스팅용(Netlify 등) 독립 실행 버전**. 완전한 HTML 문서이며, 브라우저 표준 다운로드 방식(Blob + `<a download>`)으로 파일을 저장합니다. Netlify에 배포할 때는 이 파일들을 씁니다.
+
+## 보안
+
+`index.html`(Netlify/사내 공유용 버전)은 직원과 공유해도 문서가 새어나가지 않도록 구성했습니다.
+
+- **외부 접속 0건** — pdf-lib·JSZip을 `vendor/`에 직접 포함해 CDN을 쓰지 않고, 구글 폰트도 제거했습니다(시스템 기본 글꼴 사용). CDN이 침해돼도 영향이 없습니다.
+- **CSP 적용** — `script-src 'self'`, `connect-src 'none'`으로 페이지가 어디로도 데이터를 전송할 수 없게 막습니다. 인라인 스크립트를 `app.js`로 분리했습니다.
+- **보안 헤더** — `netlify.toml`에서 CSP, `X-Frame-Options`, `nosniff`, `no-referrer`, HSTS, `Permissions-Policy`를 지정합니다. (`frame-ancestors`는 헤더로만 동작합니다.)
+- 라이브러리: pdf-lib 1.17.1, JSZip 3.10.1 (npm 배포본 그대로, 라이선스 파일 동봉). 업데이트하려면 `vendor/` 파일을 교체하세요.
+- 사내 한정이 필요하면 Netlify의 비밀번호 보호(유료) 또는 별도 접근 제한을 함께 쓰세요.
+- `pdf-merger.html`(Claude 링크용)은 Claude 화면의 제약상 CDN 스크립트를 그대로 사용합니다. 민감한 문서는 `index.html` 버전을 쓰세요.
 
 ## Netlify에 배포하기
 
@@ -48,4 +59,4 @@
 ## 페이지 갱신하기
 
 - Claude 링크: `pdf-merger.html`을 수정한 뒤 같은 URL로 다시 게시하면 링크는 그대로 유지된 채 내용만 갱신됩니다.
-- Netlify: `index.html`을 수정해 이 저장소에 푸시하면 Netlify가 자동으로 다시 배포합니다.
+- Netlify: `index.html`/`app.js`를 수정해 이 저장소에 푸시하면 Netlify가 자동으로 다시 배포합니다.
